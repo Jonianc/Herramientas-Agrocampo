@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Herramientas a Cargo Técnico
  * Description: Gestor frontend standalone (fichas + técnicos) con adjunto escaneado. Sin login.
- * Version: 2.2.1
+ * Version: 2.2.2
  * Author: Rocket Solutions
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('HAC_PLUGIN_VERSION', '2.2.1');
+define('HAC_PLUGIN_VERSION', '2.2.2');
 define('HAC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('HAC_PLUGIN_URL', plugin_dir_url(__FILE__));
 

@@ -131,7 +131,6 @@ class HAC_Router {
     $tbl_tec    = $wpdb->prefix . 'hac_tecnicos';
 
     $q = $filters['q'] ?? '';
-    $rut = $filters['rut'] ?? '';
     $from = $filters['from'] ?? '';
     $to = $filters['to'] ?? '';
     $tec = (int)($filters['tecnico_id'] ?? 0);
@@ -140,14 +139,9 @@ class HAC_Router {
     $params = [];
 
     if ($q !== '') {
-      $where .= " AND (f.nombre LIKE %s OR f.periodo LIKE %s OR EXISTS(SELECT 1 FROM $tbl_items i WHERE i.ficha_id=f.id AND i.factura LIKE %s))";
+      $where .= " AND (f.periodo LIKE %s OR EXISTS(SELECT 1 FROM $tbl_items i WHERE i.ficha_id=f.id AND i.factura LIKE %s))";
       $like = '%' . $wpdb->esc_like($q) . '%';
-      $params[] = $like; $params[] = $like; $params[] = $like;
-    }
-    if ($rut !== '') {
-      $where .= " AND f.rut LIKE %s";
-      $likeRut = '%' . $wpdb->esc_like($rut) . '%';
-      $params[] = $likeRut;
+      $params[] = $like; $params[] = $like;
     }
     if ($tec > 0) {
       $where .= " AND f.tecnico_id = %d";
@@ -184,7 +178,6 @@ class HAC_Router {
 
     $filters = [
       'q' => sanitize_text_field((string)($_GET['q'] ?? '')),
-      'rut' => sanitize_text_field((string)($_GET['rut'] ?? '')),
       'from' => sanitize_text_field((string)($_GET['from'] ?? '')),
       'to' => sanitize_text_field((string)($_GET['to'] ?? '')),
       'tecnico_id' => (int)($_GET['tecnico_id'] ?? 0),
@@ -291,12 +284,8 @@ class HAC_Router {
         <form class="no-print" method="get" action="<?php echo esc_url($base); ?>">
           <div class="grid">
             <div>
-              <label>Buscar (nombre/periodo/factura)</label>
+              <label>Buscar (periodo/factura)</label>
               <input type="text" name="q" value="<?php echo HAC_Utils::a($filters['q']); ?>">
-            </div>
-            <div>
-              <label>RUT (responsable)</label>
-              <input type="text" name="rut" value="<?php echo HAC_Utils::a($filters['rut']); ?>">
             </div>
             <div>
               <label>Técnico</label>
@@ -331,8 +320,6 @@ class HAC_Router {
             <tr>
               <th style="width:70px">ID</th>
               <th>Técnico</th>
-              <th>Nombre</th>
-              <th style="width:140px">RUT</th>
               <th>Periodo</th>
               <th style="width:70px">Ítems</th>
               <th style="width:90px">Adj</th>
@@ -342,7 +329,7 @@ class HAC_Router {
           </thead>
           <tbody>
             <?php if (empty($rows)): ?>
-              <tr><td colspan="9">Sin resultados.</td></tr>
+              <tr><td colspan="7">Sin resultados.</td></tr>
             <?php else: foreach ($rows as $r): ?>
               <?php
                 $fid = (int)$r['id'];
@@ -357,8 +344,6 @@ class HAC_Router {
               <tr>
                 <td><?php echo (int)$fid; ?></td>
                 <td><?php echo HAC_Utils::h($tec_label); ?></td>
-                <td><?php echo HAC_Utils::h($r['nombre']); ?></td>
-                <td><?php echo HAC_Utils::h($r['rut']); ?></td>
                 <td><?php echo HAC_Utils::h($r['periodo']); ?></td>
                 <td><span class="badge"><?php echo (int)$r['items_count']; ?></span></td>
                 <td><?php echo $att_cell; ?></td>
@@ -558,14 +543,6 @@ class HAC_Router {
         <div class="muted" style="margin-top:6px"><a class="link" href="<?php echo esc_url(self::page_url('techs')); ?>">Administrar técnicos</a></div>
       </div>
       <div>
-        <label>Nombre (responsable)</label>
-        <input type="text" name="nombre" required maxlength="190" placeholder="Nombre y apellido">
-      </div>
-      <div>
-        <label>RUT (responsable)</label>
-        <input type="text" name="rut" required maxlength="20" placeholder="12.345.678-9">
-      </div>
-      <div>
         <label>Entrega / Periodo</label>
         <input type="text" name="periodo" required maxlength="190" placeholder="Ej: Enero 2026 / Entrega 03">
       </div>
@@ -680,14 +657,6 @@ class HAC_Router {
           <?php endforeach; ?>
         </select>
         <div class="muted" style="margin-top:6px"><a class="link" href="<?php echo esc_url(self::page_url('techs')); ?>">Administrar técnicos</a></div>
-      </div>
-      <div>
-        <label>Nombre (responsable)</label>
-        <input type="text" name="nombre" required maxlength="190" value="<?php echo HAC_Utils::a($f['nombre']); ?>">
-      </div>
-      <div>
-        <label>RUT (responsable)</label>
-        <input type="text" name="rut" required maxlength="20" value="<?php echo HAC_Utils::a($f['rut']); ?>">
       </div>
       <div>
         <label>Entrega / Periodo</label>
@@ -822,8 +791,6 @@ class HAC_Router {
 
   <div class="grid" style="margin-top:12px">
     <div><div class="muted">Técnico</div><div><strong><?php echo $tec_label !== '' ? HAC_Utils::h($tec_label) : '—'; ?></strong></div></div>
-    <div><div class="muted">Nombre (responsable)</div><div><strong><?php echo HAC_Utils::h($f['nombre']); ?></strong></div></div>
-    <div><div class="muted">RUT (responsable)</div><div><strong><?php echo HAC_Utils::h($f['rut']); ?></strong></div></div>
     <div><div class="muted">Entrega / Periodo</div><div><strong><?php echo HAC_Utils::h($f['periodo']); ?></strong></div></div>
   </div>
 
@@ -883,7 +850,7 @@ class HAC_Router {
     $periodo = sanitize_text_field((string)($_POST['periodo'] ?? ''));
 
     $items = self::parse_items_from_post();
-    if ($tecnico_id <= 0 || $nombre === '' || $rut === '' || $periodo === '' || empty($items)) {
+    if ($tecnico_id <= 0 || $periodo === '' || empty($items)) {
       wp_safe_redirect(self::page_url('new', 0, 'invalid')); exit;
     }
 
@@ -934,7 +901,7 @@ class HAC_Router {
     $periodo = sanitize_text_field((string)($_POST['periodo'] ?? ''));
 
     $items = self::parse_items_from_post();
-    if ($tecnico_id <= 0 || $nombre === '' || $rut === '' || $periodo === '' || empty($items)) {
+    if ($tecnico_id <= 0 || $periodo === '' || empty($items)) {
       wp_safe_redirect(self::page_url('edit', $fid, 'invalid')); exit;
     }
 
